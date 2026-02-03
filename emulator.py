@@ -1,16 +1,32 @@
+import time
+import os
+
 class Emulator:
-    def __init__(self, board, robot, driver): 
+    def __init__(self, board, robot, driver, live_run=False):
         self.board = board
         self.driver = driver
         self.robot = robot
-        
-    def run(self):
-        for _ in range(1000):
-            if(self.board.is_goal(self.robot.curr_pos)):
-                return "SUCCESS"
-            self.driver.step(self.robot, self.board)
-        return "FAILED (loop)"
-  
+        self.live_run = live_run
+    
+    def run(self, live_run=False):
+        if not live_run:
+            for step in range(1000):
+                if self.board.is_goal(self.robot.curr_pos):
+                    return "SUCCESS"
+                prev = self.robot.curr_pos
+                self.driver.step(self.robot, self.board)
+                if self.robot.curr_pos != prev:
+                    os.system("cls" if os.name == "nt" else "clear")
+                    self.board.printBoard(self.robot)
+                    time.sleep(0.1)
+            return "FAILED (loop)"
+        else:
+            for _ in range(1000):
+                if self.board.is_goal(self.robot.curr_pos):
+                    return "SUCCESS"
+                self.driver.step(self.robot, self.board)
+            return "FAILED (loop)"
+
 
 class Board:
     def __init__(self, grid, start, goal):
@@ -21,17 +37,28 @@ class Board:
 
     def is_wall(self, pos):
         row, col = pos
+        if row < 0 or row >= len(self.grid) or col < 0 or col >= len(self.grid[0]):
+            return True
         return self.grid[row][col] == 1
 
     def is_goal(self, pos):
         return pos == self.goal
 
-    def printBoard(self):
-        print("Goal at:", self.goal)
-        for row in self.grid:
-            for c in row:
-                print(c, end='')
+    def printBoard(self, robot):
+        print("\n" + "-" * 30)
+        for i, row in enumerate(self.grid):
+            for j, cell in enumerate(row):
+                
+                if (i, j) == robot.curr_pos:
+                    print("X", end="")
+                elif (i, j) == self.goal:
+                    print("G", end="")
+                elif cell == 1:
+                    print("1", end="")
+                else:
+                    print(" ", end="")
             print()
+        print("-" * 30)
 
 
 class BoardLoader:
@@ -40,26 +67,27 @@ class BoardLoader:
         grid = []
         start = None
         goal = None
-
         with open(filename, "r") as f:
             lines = f.readlines()
             lines = [line.rstrip("\n") for line in lines]
             maze_2d = [list(line) for line in lines]
-
+            
             for i, row in enumerate(maze_2d):
                 for j, char in enumerate(row):
                     if char == 'S':
                         start = (i, j)
-                        maze_2d[i][j] = "S"
+                        maze_2d[i][j] = " "  
                     elif char == 'G':
                         goal = (i, j)
-                        maze_2d[i][j] = "G"
+                        maze_2d[i][j] = " " 
                     elif char in ('|', '+', '-'):
                         maze_2d[i][j] = 1
                     else:
                         maze_2d[i][j] = " "
-
+        
         return Board(maze_2d, start, goal)
+
+
 class RightHandDriver:
     def step(self, robot, board):
         if robot.can_move_right(board):
@@ -69,17 +97,11 @@ class RightHandDriver:
             robot.move_forward(board)
         else:
             robot.turn_left()
-            
-            
-class RandomDriver:
-    def step(self, robot, board):
-        if robot.can_move_right(board):
-            robot.turn_right()
-            robot.move_forward(board)
-        elif robot.can_move_forward(board):
-            robot.move_forward(board)
-        else:
-            robot.turn_left()
+''' 
+def FloodFillDriver:
+    def step(ste)
+'''
+
 class LeftHandDriver:
     def step(self, robot, board):
         if robot.can_move_left(board):
@@ -89,27 +111,39 @@ class LeftHandDriver:
             robot.move_forward(board)
         else:
             robot.turn_right()
-            
-def run_simulation(board_file, driver_class, board_name, driver_name):
-    print(f"\n--- {board_name} Board | {driver_name} ---")
+
+
+class RandomDriver:
+    import random
     
-    try:
-        board = BoardLoader.from_file(board_file)
-        robot = Robot(board.start, board.goal)
-        driver = driver_class()
-        emulator = Emulator(board, robot, driver)
+    def step(self, robot, board):
         
-        result = emulator.run()
-        print(f"Result: {result}")
+        possible_moves = []
         
-        result_obj = Result(robot)
-        result_obj.statusReport()
-        print()
+        if robot.can_move_forward(board):
+            possible_moves.append('forward')
+        if robot.can_move_right(board):
+            possible_moves.append('right')
+        if robot.can_move_left(board):
+            possible_moves.append('left')
         
-    except FileNotFoundError:
-        print(f"Error: Board file '{board_file}' not found!")
-    except Exception as e:
-        print(f"Error running simulation: {e}")
+        if not possible_moves:
+            robot.turn_right()
+            robot.turn_right() 
+            return
+        
+        import random
+        choice = random.choice(possible_moves)
+        
+        if choice == 'forward':
+            robot.move_forward(board)
+        elif choice == 'right':
+            robot.turn_right()
+            robot.move_forward(board)
+        elif choice == 'left':
+            robot.turn_left()
+            robot.move_forward(board)
+
 
 class Robot:
     DIR = ["N", "E", "S", "W"]
@@ -118,9 +152,9 @@ class Robot:
     def __init__(self, start_pos, goal_pos):
         self.curr_pos = start_pos
         self.goal_pos = goal_pos
-        self.direction = "S"  # Start facing South
+        self.direction = "S"  
         self.is_found = False
-        self.steps = 0  
+        self.steps = 0
 
     def _get_next_pos(self, direction):
         dr, dc = self.DELTA[direction]
@@ -132,17 +166,17 @@ class Robot:
         right_dir = self.DIR[right_idx]
         next_pos = self._get_next_pos(right_dir)
         return not board.is_wall(next_pos)
-    
+
     def can_move_left(self, board):
         left_idx = (self.DIR.index(self.direction) - 1) % 4
         left_dir = self.DIR[left_idx]
         next_pos = self._get_next_pos(left_dir)
         return not board.is_wall(next_pos)
-    
+
     def can_move_forward(self, board):
         next_pos = self._get_next_pos(self.direction)
         return not board.is_wall(next_pos)
-            
+
     def turn_right(self):
         idx = self.DIR.index(self.direction)
         self.direction = self.DIR[(idx + 1) % 4]
@@ -153,30 +187,47 @@ class Robot:
 
     def move_forward(self, board):
         next_pos = self._get_next_pos(self.direction)
-        
         if not board.is_wall(next_pos):
             self.curr_pos = next_pos
             self.steps += 1
             return True
         return False
+
+
 class Result:
     def __init__(self, robot):
         self.robot = robot
-    
+
     def statusReport(self):
         print(f"Final position: {self.robot.curr_pos}")
         print(f"Total steps: {self.robot.steps}")
         print(f"Final direction: {self.robot.direction}")
 
 
+def run_simulation(board_file, driver_class, board_name, driver_name):
+    print(f"\n--- {board_name} Board | {driver_name} ---")
+    try:
+        board = BoardLoader.from_file(board_file)
+        robot = Robot(board.start, board.goal)
+        driver = driver_class()
+        emulator = Emulator(board, robot, driver)
+        result = emulator.run()
+        print(f"Result: {result}")
+        result_obj = Result(robot)
+        result_obj.statusReport()
+        print()
+    except FileNotFoundError:
+        print(f"Error: Board file '{board_file}' not found!")
+    except Exception as e:
+        print(f"Error running simulation: {e}")
+
 def main():
-    board = BoardLoader.from_file("/Users/ethanporter/CS Projects/Micromouse Project/boards/file.txt")
+    board = BoardLoader.from_file("boards/file.txt")
     robot = Robot(board.start, board.goal)
     driver = RightHandDriver()
     emulator = Emulator(board, robot, driver)
     result = emulator.run()
     print(result)
-    
     result_obj = Result(robot)
     result_obj.statusReport()
 
