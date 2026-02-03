@@ -9,7 +9,7 @@ class Emulator:
         self.live_run = live_run
     
     def run(self, live_run=False):
-        if not live_run:
+        if live_run == True:
             for step in range(1000):
                 if self.board.is_goal(self.robot.curr_pos):
                     return "SUCCESS"
@@ -50,7 +50,7 @@ class Board:
             for j, cell in enumerate(row):
                 
                 if (i, j) == robot.curr_pos:
-                    print("X", end="")
+                    print("", end="")
                 elif (i, j) == self.goal:
                     print("G", end="")
                 elif cell == 1:
@@ -192,8 +192,12 @@ class Robot:
             self.steps += 1
             return True
         return False
+    
+    def path_finding(self): 
+        return 
 
-
+    def optimize_path(self): 
+        return
 class Result:
     def __init__(self, robot):
         self.robot = robot
