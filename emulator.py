@@ -9,7 +9,7 @@ class Emulator:
         self.live_run = live_run
     
     def run(self, live_run=False):
-        if live_run == True:
+        if live_run == False:
             for step in range(1000):
                 if self.board.is_goal(self.robot.curr_pos):
                     return "SUCCESS"
@@ -50,7 +50,7 @@ class Board:
             for j, cell in enumerate(row):
                 
                 if (i, j) == robot.curr_pos:
-                    print("", end="")
+                    print("*", end="")
                 elif (i, j) == self.goal:
                     print("G", end="")
                 elif cell == 1:
@@ -144,18 +144,66 @@ class RandomDriver:
             robot.turn_left()
             robot.move_forward(board)
 
-
+'''
 class Robot:
     DIR = ["N", "E", "S", "W"]
     DELTA = {"N": (-1, 0), "E": (0, 1), "S": (1, 0), "W": (0, -1)}
 
-    def __init__(self, start_pos, goal_pos):
+    def __init__(self, start_pos=(0,0), goal_pos=(1,1), board_size=[10,10]):
         self.curr_pos = start_pos
         self.goal_pos = goal_pos
         self.direction = "S"  
         self.is_found = False
         self.steps = 0
-
+        self.board_size = board_size
+        
+        
+        rows, cols = board_size
+        self.roboard = [['*' for _ in range(cols)] for _ in range(rows)]
+        
+        start_row, start_col = start_pos
+        self.roboard[start_row][start_col] = "X"
+        
+    def get_next_pos(self, board, direction): 
+        dr, dc = self.DELTA[direction]
+        row, col = self.curr_pos
+        return (row+dr, col+dc)
+    
+    def find_path(self, board, direction): 
+        for dir in self.DIR:
+            dr, dc = self.DELTA[direction]
+            row, col = self.curr_pos
+            next_pos = [(dr+row), (dc+col)]
+            next_row, next_col = next_pos
+        
+            if 0 <= next_row < len(self.roboard) and 0 <= next_col < len(self.roboard[0]):
+                if self.roboard[next_row][next_col] == "*": 
+    
+    #This value will need to change in response to a real board.
+    #This is where there will be an is_wall function that will
+    #return a value and create the board   
+                 
+                    if board.is_wall(next_pos):
+                        self.roboard[next_row][next_col] = 1
+                    elif board.is_goal(next_pos):
+                        self.roboard[next_row][next_col] = "G"
+                    else:
+                        self.roboard[next_row][next_col] = 0
+                        
+            
+        
+            
+            
+    def printRoboard(self, roboard):
+        self.roboard = roboard
+        rows = len(roboard)
+        col = len(rows)
+        
+        for i in range(rows):
+            for c in range(col):
+                print(self.roboard[i][c], end = "")
+            print()
+    
     def _get_next_pos(self, direction):
         dr, dc = self.DELTA[direction]
         row, col = self.curr_pos
@@ -192,12 +240,7 @@ class Robot:
             self.steps += 1
             return True
         return False
-    
-    def path_finding(self): 
-        return 
-
-    def optimize_path(self): 
-        return
+'''
 class Result:
     def __init__(self, robot):
         self.robot = robot
@@ -224,6 +267,7 @@ def run_simulation(board_file, driver_class, board_name, driver_name):
         print(f"Error: Board file '{board_file}' not found!")
     except Exception as e:
         print(f"Error running simulation: {e}")
+
 
 def main():
     board = BoardLoader.from_file("boards/file.txt")
