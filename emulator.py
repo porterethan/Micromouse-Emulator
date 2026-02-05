@@ -189,10 +189,6 @@ class Robot:
                         self.roboard[next_row][next_col] = "G"
                     else:
                         self.roboard[next_row][next_col] = 0
-                        
-            
-        
-            
             
     def printRoboard(self, roboard):
         self.roboard = roboard

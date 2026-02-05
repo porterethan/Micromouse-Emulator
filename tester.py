@@ -4,6 +4,7 @@ from emulator import BoardLoader
 from emulator import RightHandDriver
 from emulator import LeftHandDriver
 from emulator import Result
+import time 
 
 class Robot:
     DIR = ["N", "E", "S", "W"]
@@ -32,7 +33,6 @@ class Robot:
         for direction in self.DIR:
             dr, dc = self.DELTA[direction]
             row, col = self.curr_pos
-            next_pos = (row + dr, col + dc)
             next_row, next_col = row + dr, col + dc
 
             #This value will need to change in response to a real board.
@@ -55,7 +55,7 @@ class Robot:
         
     def move(self):
         for direction in self.DIR:
-            next_row, next_col = self.get_next_pos(direction)
+            next_row, next_col = self._get_next_pos(direction)
 
             if self.is_valid_move(next_row, next_col):
                 curr_row, curr_col = self.curr_pos
@@ -95,8 +95,18 @@ class Robot:
         return any("*" in sublist for sublist in self.roboard)
     
     def fill_path(self, board):
+        last_print = time.time()
+        print("\nStatus:")
+        print("Running...")
         while self.check_for_ast() and not self.is_found:
-            self.find_path(board)
+            
+            now = time.time()
+            if now - last_print >= 3:
+                print("Running...")
+                last_print = now
+            
+            
+            self.find_path(board, self.DIR)
             self.move()
                         
     def printRoboard(self, roboard):
@@ -147,14 +157,22 @@ class Robot:
         return False
 
         
-    
-    
-        
 def main():
+    # Load the board
     board = BoardLoader.from_file("boards/file.txt")
+    
     robot = Robot(board.start, board.goal)
     
+    print("Initial board:")
     robot.printRoboard(robot.roboard)
+    
+    robot.fill_path(board)
+    
+    print("\nFinal explored board:")
+    robot.printRoboard(robot.roboard)
+    
+    return robot.start_pos, robot.goal_pos, robot.roboard
+
 
 if __name__ == "__main__":
     main()
