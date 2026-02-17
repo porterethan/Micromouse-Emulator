@@ -1,163 +1,131 @@
-from tester import Emulator, BoardLoader, Result
-import heapq
+import time
+import os
+import random
+
+class Emulator:
+    def __init__(self, board, robot, driver, live_run=False):
+        self.board = board
+        self.robot = robot
+        self.driver = driver
+        self.live_run = live_run
+
+    def run(self):
+        for _ in range(1000):
+            if self.board.is_goal(self.robot.curr_pos):
+                return "SUCCESS"
+            self.driver.step(self.robot, self.board)
+            if not self.live_run:
+                os.system("cls" if os.name == "nt" else "clear")
+                self.board.printBoard(self.robot)
+                time.sleep(0.05)
+        return "FAILED (loop)"
 
 
-def heuristic(a, b):
-    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+class Board:
+    def __init__(self, grid, start, goal):
+        self.grid = grid
+        self.start = start
+        self.goal = goal
 
+    def is_wall(self, pos):
+        r, c = pos
+        if r < 0 or r >= len(self.grid) or c < 0 or c >= len(self.grid[0]):
+            return True
+        return self.grid[r][c] == 1
 
-def astar(grid, start, goal):
-    rows = len(grid)
-    cols = len(grid[0])
+    def is_goal(self, pos):
+        return pos == self.goal
 
-    frontier = []
-    heapq.heappush(frontier, (0, start))
-
-    came_from = {start: None}
-    cost_so_far = {start: 0}
-
-    while frontier:
-        _, current = heapq.heappop(frontier)
-
-        if current == goal:
-            path = []
-            while current:
-                path.append(current)
-                current = came_from[current]
-            return list(reversed(path))
-
-        r, c = current
-
-        for dr, dc in [(-1, 0), (0, 1), (1, 0), (0, -1)]:
-            nr, nc = r + dr, c + dc
-
-            if 0 <= nr < rows and 0 <= nc < cols:
-                if grid[nr][nc] != 1:
-                    new_cost = cost_so_far[current] + 1
-                    if (nr, nc) not in cost_so_far or new_cost < cost_so_far[(nr, nc)]:
-                        cost_so_far[(nr, nc)] = new_cost
-                        priority = new_cost + heuristic((nr, nc), goal)
-                        heapq.heappush(frontier, (priority, (nr, nc)))
-                        came_from[(nr, nc)] = current
-
-    return None
-
-
-class Robot:
-    DIR = ["N", "E", "S", "W"]
-    DELTA = {"N": (-1, 0), "E": (0, 1), "S": (1, 0), "W": (0, -1)}
-
-    def __init__(self, start_pos, goal_pos, board_size):
-        self.curr_pos = start_pos
-        self.start_pos = start_pos
-        self.goal_pos = goal_pos
-        self.direction = "N"
-        self.steps = 0
-
-        self.command_string = ""
-        self.command_index = 0
-        self.board_size = board_size
-
-    def generate_path(self, board):
-        path = astar(board.grid, self.start_pos, self.goal_pos)
-        if not path:
-            return ""
-
-        commands = []
-        direction = self.direction
-
-        for i in range(len(path) - 1):
-            dr = path[i + 1][0] - path[i][0]
-            dc = path[i + 1][1] - path[i][1]
-
-            for d, delta in self.DELTA.items():
-                if delta == (dr, dc):
-                    needed = d
-                    break
-
-            while direction != needed:
-                ci = self.DIR.index(direction)
-                ni = self.DIR.index(needed)
-
-                if (ni - ci) % 4 <= (ci - ni) % 4:
-                    commands.append("R")
-                    direction = self.DIR[(ci + 1) % 4]
+    def printBoard(self, robot):
+        print("\n" + "-" * 30)
+        for i, row in enumerate(self.grid):
+            for j, cell in enumerate(row):
+                if (i, j) == robot.curr_pos:
+                    print("*", end="")
+                elif (i, j) == self.goal:
+                    print("G", end="")
+                elif cell == 1:
+                    print("1", end="")
                 else:
-                    commands.append("L")
-                    direction = self.DIR[(ci - 1) % 4]
-
-            commands.append("F")
-
-        return "".join(commands)
-
-    def execute_next(self, board):
-        if not self.command_string:
-            self.command_string = self.generate_path(board)
-            self.command_index = 0
-
-        if self.command_index >= len(self.command_string):
-            return
-
-        cmd = self.command_string[self.command_index]
-        self.command_index += 1
-
-        if cmd == "F":
-            self.move_forward(board)
-        elif cmd == "R":
-            self.turn_right()
-        elif cmd == "L":
-            self.turn_left()
-
-    def _get_next_pos(self, direction):
-        dr, dc = self.DELTA[direction]
-        r, c = self.curr_pos
-        return r + dr, c + dc
-
-    def move_forward(self, board):
-        next_pos = self._get_next_pos(self.direction)
-        if not board.is_wall(next_pos):
-            self.curr_pos = next_pos
-            self.steps += 1
-
-    def turn_right(self):
-        i = self.DIR.index(self.direction)
-        self.direction = self.DIR[(i + 1) % 4]
-
-    def turn_left(self):
-        i = self.DIR.index(self.direction)
-        self.direction = self.DIR[(i - 1) % 4]
-
-    def can_move_forward(self, board):
-        return not board.is_wall(self._get_next_pos(self.direction))
-
-    def can_move_right(self, board):
-        i = (self.DIR.index(self.direction) + 1) % 4
-        return not board.is_wall(self._get_next_pos(self.DIR[i]))
-
-    def can_move_left(self, board):
-        i = (self.DIR.index(self.direction) - 1) % 4
-        return not board.is_wall(self._get_next_pos(self.DIR[i]))
+                    print(" ", end="")
+            print()
+        print("-" * 30)
 
 
-class AStarDriver:
+class BoardLoader:
+    @staticmethod
+    def from_file(filename):
+        grid = []
+        start = None
+        goal = None
+        with open(filename, "r") as f:
+            lines = [line.rstrip("\n") for line in f.readlines()]
+            maze = [list(line) for line in lines]
+        for i in range(len(maze)):
+            for j in range(len(maze[i])):
+                if maze[i][j] == "S":
+                    start = (i, j)
+                    maze[i][j] = " "
+                elif maze[i][j] == "G":
+                    goal = (i, j)
+                    maze[i][j] = " "
+                elif maze[i][j] in ("|", "+", "-"):
+                    maze[i][j] = 1
+                else:
+                    maze[i][j] = " "
+        return Board(maze, start, goal)
+
+
+class RightHandDriver:
     def step(self, robot, board):
-        robot.execute_next(board)
+        if robot.can_move_right(board):
+            robot.turn_right()
+            robot.move_forward(board)
+        elif robot.can_move_forward(board):
+            robot.move_forward(board)
+        else:
+            robot.turn_left()
 
 
-def main():
-    board = BoardLoader.from_file("boards/file.txt")
-    rows = len(board.grid)
-    cols = len(board.grid[0])
-
-    robot = Robot(board.start, board.goal, (rows, cols))
-    driver = AStarDriver()
-
-    emulator = Emulator(board, robot, driver)
-    result = emulator.run()
-
-    print(result)
-    Result(robot).statusReport()
+class LeftHandDriver:
+    def step(self, robot, board):
+        if robot.can_move_left(board):
+            robot.turn_left()
+            robot.move_forward(board)
+        elif robot.can_move_forward(board):
+            robot.move_forward(board)
+        else:
+            robot.turn_right()
 
 
-if __name__ == "__main__":
-    main()
+class RandomDriver:
+    def step(self, robot, board):
+        options = []
+        if robot.can_move_forward(board):
+            options.append("F")
+        if robot.can_move_right(board):
+            options.append("R")
+        if robot.can_move_left(board):
+            options.append("L")
+        if not options:
+            robot.turn_right()
+            return
+        choice = random.choice(options)
+        if choice == "F":
+            robot.move_forward(board)
+        elif choice == "R":
+            robot.turn_right()
+            robot.move_forward(board)
+        elif choice == "L":
+            robot.turn_left()
+            robot.move_forward(board)
+
+
+class Result:
+    def __init__(self, robot):
+        self.robot = robot
+
+    def statusReport(self):
+        print(f"Final position: {self.robot.curr_pos}")
+        print(f"Total steps: {self.robot.steps}")
+        print(f"Final direction: {self.robot.direction}")
