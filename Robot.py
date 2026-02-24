@@ -2,6 +2,10 @@ from Emulator import *
 import heapq
 
 
+# ---------------------------------------------------------------------------
+# A* helpers
+# ---------------------------------------------------------------------------
+
 def heuristic(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
@@ -13,7 +17,7 @@ def astar(grid, start, goal):
     frontier = []
     heapq.heappush(frontier, (0, start))
 
-    came_from = {start: None}
+    came_from   = {start: None}
     cost_so_far = {start: 0}
 
     while frontier:
@@ -27,10 +31,8 @@ def astar(grid, start, goal):
             return list(reversed(path))
 
         r, c = current
-
         for dr, dc in [(-1, 0), (0, 1), (1, 0), (0, -1)]:
             nr, nc = r + dr, c + dc
-
             if 0 <= nr < rows and 0 <= nc < cols:
                 if grid[nr][nc] != 1:
                     new_cost = cost_so_far[current] + 1
@@ -43,42 +45,50 @@ def astar(grid, start, goal):
     return None
 
 
+# ---------------------------------------------------------------------------
+# Robot
+# ---------------------------------------------------------------------------
+
 class Robot:
-    DIR = ["N", "E", "S", "W"]
+    DIR   = ["N", "E", "S", "W"]
     DELTA = {"N": (-1, 0), "E": (0, 1), "S": (1, 0), "W": (0, -1)}
 
     def __init__(self, start_pos, goal_pos, board_size):
-        self.curr_pos = start_pos
+        self.curr_pos  = start_pos
         self.start_pos = start_pos
-        self.goal_pos = goal_pos
+        self.goal_pos  = goal_pos
         self.direction = "N"
-        self.steps = 0
 
+        # movement counters used by Result.timeReport()
+        self.steps = 0   # forward moves
+        self.turns = 0   # 90-degree turns (logged by reactive drivers)
+
+        # A* pre-computed command string
         self.command_string = ""
-        self.command_index = 0
-        self.board_size = board_size
+        self.command_index  = 0
+        self.board_size     = board_size
+
+    # ------------------------------------------------------------------
+    # A* path generation
+    # ------------------------------------------------------------------
 
     def generate_path(self, board):
         path = astar(board.grid, self.start_pos, self.goal_pos)
         if not path:
             return ""
 
-        commands = []
+        commands  = []
         direction = self.direction
 
         for i in range(len(path) - 1):
             dr = path[i + 1][0] - path[i][0]
             dc = path[i + 1][1] - path[i][1]
 
-            for d, delta in self.DELTA.items():
-                if delta == (dr, dc):
-                    needed = d
-                    break
+            needed = next(d for d, delta in self.DELTA.items() if delta == (dr, dc))
 
             while direction != needed:
                 ci = self.DIR.index(direction)
                 ni = self.DIR.index(needed)
-
                 if (ni - ci) % 4 <= (ci - ni) % 4:
                     commands.append("R")
                     direction = self.DIR[(ci + 1) % 4]
@@ -93,7 +103,7 @@ class Robot:
     def execute_next(self, board):
         if not self.command_string:
             self.command_string = self.generate_path(board)
-            self.command_index = 0
+            self.command_index  = 0
 
         if self.command_index >= len(self.command_string):
             return
@@ -108,24 +118,34 @@ class Robot:
         elif cmd == "L":
             self.turn_left()
 
+    # ------------------------------------------------------------------
+    # Primitive actions
+    # ------------------------------------------------------------------
+
     def _get_next_pos(self, direction):
         dr, dc = self.DELTA[direction]
-        r, c = self.curr_pos
+        r, c   = self.curr_pos
         return r + dr, c + dc
 
     def move_forward(self, board):
         next_pos = self._get_next_pos(self.direction)
         if not board.is_wall(next_pos):
             self.curr_pos = next_pos
-            self.steps += 1
+            self.steps   += 1
 
     def turn_right(self):
-        i = self.DIR.index(self.direction)
+        i              = self.DIR.index(self.direction)
         self.direction = self.DIR[(i + 1) % 4]
+        self.turns    += 1          # log every 90-degree turn
 
     def turn_left(self):
-        i = self.DIR.index(self.direction)
+        i              = self.DIR.index(self.direction)
         self.direction = self.DIR[(i - 1) % 4]
+        self.turns    += 1          # log every 90-degree turn
+
+    # ------------------------------------------------------------------
+    # Sensing helpers
+    # ------------------------------------------------------------------
 
     def can_move_forward(self, board):
         return not board.is_wall(self._get_next_pos(self.direction))
@@ -139,25 +159,10 @@ class Robot:
         return not board.is_wall(self._get_next_pos(self.DIR[i]))
 
 
+# ---------------------------------------------------------------------------
+# A* driver
+# ---------------------------------------------------------------------------
+
 class AStarDriver:
     def step(self, robot, board):
         robot.execute_next(board)
-        
-    
-def main():
-    board = BoardLoader.from_file("boards/file.txt")
-    rows = len(board.grid)
-    cols = len(board.grid[0])
-
-    robot = Robot(board.start, board.goal, (rows, cols))
-    driver = AStarDriver()
-
-    emulator = Emulator(board, robot, driver)
-    result = emulator.run()
-
-    print(result)
-    Result(robot).statusReport()
-
-
-if __name__ == "__main__":
-    main()

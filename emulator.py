@@ -2,6 +2,7 @@ import time
 import os
 import random
 
+
 class Emulator:
     def __init__(self, board, robot, driver, live_run=False):
         self.board = board
@@ -122,10 +123,51 @@ class RandomDriver:
 
 
 class Result:
+    STEP_TIME = 0.7   # seconds per forward move
+    TURN_TIME = 1.4   # seconds per 90-degree turn
+
     def __init__(self, robot):
         self.robot = robot
 
     def statusReport(self):
-        print(f"Final position: {self.robot.curr_pos}")
-        print(f"Total steps: {self.robot.steps}")
+        print(f"\nFinal position : {self.robot.curr_pos}")
+        print(f"Total steps    : {self.robot.steps}")
         print(f"Final direction: {self.robot.direction}")
+        self._timeReport()
+
+    # ------------------------------------------------------------------
+    # Timing estimate
+    # ------------------------------------------------------------------
+    def _timeReport(self):
+        commands = getattr(self.robot, "command_string", "")
+
+        if commands:
+            # A* pre-computed path — exact command counts are available
+            num_steps = commands.count("F")
+            num_turns = commands.count("R") + commands.count("L")
+            source = "A* pre-computed path"
+        else:
+            # Reactive drivers — approximate from logged moves/turns
+            num_steps = getattr(self.robot, "steps", 0)
+            num_turns = getattr(self.robot, "turns", 0)
+            source = "reactive driver (approximate)"
+
+        step_time  = num_steps * self.STEP_TIME
+        turn_time  = num_turns * self.TURN_TIME
+        total_time = step_time + turn_time
+
+        minutes = int(total_time // 60)
+        seconds = total_time % 60
+
+        print("\n" + "=" * 38)
+        print("  ESTIMATED PHYSICAL RUN TIME")
+        print(f"  Source : {source}")
+        print("=" * 38)
+        print(f"  Forward moves : {num_steps:>4}  × {self.STEP_TIME}s = {step_time:>7.2f}s")
+        print(f"  Turns         : {num_turns:>4}  × {self.TURN_TIME}s = {turn_time:>7.2f}s")
+        print(f"  {'─' * 34}")
+        if minutes > 0:
+            print(f"  Total          :              {total_time:>7.2f}s  ({minutes}m {seconds:.2f}s)")
+        else:
+            print(f"  Total          :              {total_time:>7.2f}s")
+        print("=" * 38)
