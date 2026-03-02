@@ -1,5 +1,5 @@
 from Emulator import *
-from Robot import *
+from Emulator.Robot import *
 import time
 
 
