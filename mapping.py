@@ -1,8 +1,6 @@
 import time
 
-# ---------------------------------------------------------------------------
 # Minimal priority queue (replaces heapq, which is absent in CircuitPython)
-# ---------------------------------------------------------------------------
 
 def _pq_push(pq, item):
     pq.append(item)
@@ -17,28 +15,21 @@ def _pq_pop(pq):
     pq.pop()
     return item
 
-# ---------------------------------------------------------------------------
-# Pre-mapped 10 x 10 maze
-#   1 = wall   0 = open cell
-#   Start (S): (1, 1)   Goal (G): (8, 8)
-#   All border cells are walls, matching the physical maze boundary.
-# ---------------------------------------------------------------------------
-
 SIZE  = 12
 START = (1, 1)
-GOAL  = (1, 10)
+GOAL  = (5, 6)
 
 MAZE = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1],
     [1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1],
-    [1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1],
-    [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
-    [1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
-    [1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1],
-    [1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1],
+    [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1],
+    [1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1],
+    [1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1],
     [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ]
@@ -50,10 +41,6 @@ DELTA = {
     "S": ( 1,  0),
     "W": ( 0, -1),
 }
-
-# ---------------------------------------------------------------------------
-# Display
-# ---------------------------------------------------------------------------
 
 def print_board(path=None):
     path_set = set(path) if path else set()
@@ -74,13 +61,8 @@ def print_board(path=None):
         print(row_str)
     print()
 
-# ---------------------------------------------------------------------------
-# A* pathfinding
-# ---------------------------------------------------------------------------
-
 def heuristic(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
-
 
 def astar():
     frontier = []
@@ -113,10 +95,6 @@ def astar():
 
     return None
 
-# ---------------------------------------------------------------------------
-# Execute a pre-built command string on a robot object
-# ---------------------------------------------------------------------------
-
 def solve(commands, robot):
     actions = {
         "F": robot.move_forward,
@@ -126,17 +104,12 @@ def solve(commands, robot):
     for cmd in commands:
         actions[cmd]()
 
-# ---------------------------------------------------------------------------
-# Path -> robot command string  (F = forward, L = turn left, R = turn right)
-# Inspired by Robot.py generate_path()
-# ---------------------------------------------------------------------------
-
 def path_to_commands(path):
     if not path:
         return ""
 
     commands  = []
-    direction = "N"   # robot starts facing North
+    direction = "S"   # robot starts facing South
 
     for i in range(len(path) - 1):
         dr = path[i + 1][0] - path[i][0]
@@ -158,9 +131,7 @@ def path_to_commands(path):
 
     return "".join(commands)
 
-# ---------------------------------------------------------------------------
-# Main - stress test: compute A* on the pre-mapped maze without moving
-# ---------------------------------------------------------------------------
+# Main
 
 STEP_TIME = 0.7   # seconds per forward move (physical estimate)
 TURN_TIME = 1.4   # seconds per 90-degree turn (physical estimate)
@@ -206,3 +177,4 @@ else:
     print(f"  {'─' * 36}")
     print(f"  Total         :              {est_time:>6.2f}s")
     print("=" * 42)
+
