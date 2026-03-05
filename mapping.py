@@ -161,14 +161,13 @@ else:
     print("Optimal path:")
     print_board(path)
 
-    print("Path cells   :", path)
+    #print("Path cells   :", path)
     print("Commands     :", commands)
     print(f"Cells visited: {len(path)}")
     print(f"Steps  (F)   : {num_steps}")
     print(f"Turns  (R/L) : {num_turns}")
     print(f"A* compute   : {elapsed_ms:.3f} ms")
 
-    print()
     print("=" * 42)
     print("  ESTIMATED PHYSICAL RUN TIME")
     print("=" * 42)
