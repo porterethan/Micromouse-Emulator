@@ -27,7 +27,7 @@ DELTA = {
     "W": (0, -1)
 }
 
-SIZE = 12
+SIZE = 20
 visited = [[False for _ in range(SIZE)] for _ in range(SIZE)]
 
 def create_board():

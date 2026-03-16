@@ -25,6 +25,8 @@ def print_menu(selected):
     print("\n=== ROMI MENU ===")
     print("> [1] Exploration" if selected == 1 else "  [1] Exploration")
     print("> [2] Mapping" if selected == 2 else "  [2] Mapping")
+    print("> [3] Test Forward" if selected == 3 else "  [3] Test Forward")
+    print("> [4] Test Turns" if selected == 4 else "  [4] Test Turns")
     print("Press SELECT to confirm")
 
 print_menu(current_mode)
@@ -52,6 +54,15 @@ elif selected_mode == 2:
     print("Starting Mapping mode...")
     pass
 
+elif selected_mode == 3:
+    print("Starting Forward Test...")
+    final_board = robot.explore_full_board(romi)
+    robot.print_board(final_board)
+    
+elif selected_mode == 4:
+    print("Starting Turn Test...")
+    final_board = robot.explore_full_board(romi)
+    robot.print_board(final_board)
 while True:
     time.sleep(1)
 

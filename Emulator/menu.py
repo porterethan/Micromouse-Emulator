@@ -1,24 +1,33 @@
-from Emulator import *
-from Emulator.Robot import *
-import time
+from emulator import *
+from Robot import *                          
+from Exploration_Emulated import ExplorationRobot, ExplorationDriver
 
 
-def run_simulation(board_path, driver_class, board_name, driver_name):
+def run_simulation(board_path, driver_class, board_name, driver_name,
+                   use_exploration_robot=False):
     print(f"\nRunning {driver_name} on {board_name}  —  {board_path}")
     print("-" * 50)
 
-    board  = BoardLoader.from_file(board_path)
-    rows   = len(board.grid)
-    cols   = len(board.grid[0])
+    board = BoardLoader.from_file(board_path)
+    rows  = len(board.grid)
+    cols  = len(board.grid[0])
 
-    robot  = Robot(board.start, board.goal, (rows, cols))
-    driver = driver_class()
+    if use_exploration_robot:
+        robot = ExplorationRobot(board.start, board.goal, (rows, cols))
+    else:
+        robot = Robot(board.start, board.goal, (rows, cols))
 
-    emulator = Emulator(board, robot, driver)
-    result   = emulator.run()
+    driver   = driver_class()
+    emu    = Emulator(board, robot, driver)
+    result = emu.run()
 
     print(result)
     Result(robot).statusReport()
+
+    # Show the discovered map after an exploration run
+    if use_exploration_robot:
+        print("\n── Discovered Maze Map ──")
+        robot.print_discovered_maze()
 
 
 def menu():
@@ -38,7 +47,11 @@ def menu():
         3: LeftHandDriver,
         4: RandomDriver,
         5: AStarDriver,
+        6: ExplorationDriver,   # ← NEW
     }
+
+    # Drivers that need ExplorationRobot instead of Robot
+    exploration_drivers = {6}
 
     board_names = {1: "EASY", 2: "MEDIUM", 3: "HARD", 4: "ALL"}
 
@@ -48,6 +61,7 @@ def menu():
         3: "LEFT HAND DRIVER",
         4: "RANDOM DRIVER",
         5: "A* DRIVER",
+        6: "EXPLORATION (DFS) DRIVER",   # ← NEW
     }
 
     while True:
@@ -91,7 +105,7 @@ def menu():
             if lvl_choice not in range(1, len(board_options) + 1):
                 continue
 
-            selected_file  = board_options[lvl_choice - 1][0]
+            selected_file   = board_options[lvl_choice - 1][0]
             selected_boards = [f"boards/{selected_file}"]
         else:
             for difficulty in [1, 2, 3]:
@@ -105,6 +119,7 @@ def menu():
         print("  [3] LEFT HAND DRIVER")
         print("  [4] RANDOM DRIVER")
         print("  [5] A* DRIVER")
+        print("  [6] EXPLORATION (DFS) DRIVER")
         print("  [0] BACK")
 
         try:
@@ -114,7 +129,7 @@ def menu():
 
         if driver_choice == 0:
             continue
-        if driver_choice not in [1, 2, 3, 4, 5]:
+        if driver_choice not in [1, 2, 3, 4, 5, 6]:
             continue
 
         time.sleep(1)
@@ -129,6 +144,7 @@ def menu():
                         driver_classes[driver_num],
                         board_names.get(board_choice, "?"),
                         driver_names[driver_num],
+                        use_exploration_robot=(driver_num in exploration_drivers),
                     )
         except Exception as e:
             print(f"\nError: {e}")
